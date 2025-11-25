@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试数据更新功能</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="mb-4">大乐透数据更新功能测试</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>测试说明</h5>
+            </div>
+            <div class="card-body">
+                <p>此页面用于测试数据更新功能。点击下面的按钮，将从网络获取最新的大乐透开奖数据，并显示结果。</p>
+                <p>更新完成后，您可以在控制台(F12)查看详细信息。</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>更新数据</h5>
+            </div>
+            <div class="card-body">
+                <button id="updateDataBtn" class="btn btn-primary">
+                    <i class="bi bi-cloud-download"></i> 获取最新数据
+                </button>
+                <div id="status" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>最新数据</h5>
+            </div>
+            <div class="card-body">
+                <div id="latestData">
+                    <p>点击上方按钮获取最新数据...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 更新数据模态框 -->
+    <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateModalLabel">
+                        <i class="bi bi-cloud-download"></i> 更新大乐透数据
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="updateStatus">准备更新最新开奖数据...</p>
+                    <div class="progress mb-3" id="updateProgressContainer" style="display: none;">
+                        <div class="progress-bar" id="updateProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <div id="updateResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-warning" id="confirmUpdate">
+                        <i class="bi bi-cloud-download"></i> 确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 加载现有数据
+        let existingData = [];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载数据
+            loadExistingData();
+            
+            // 绑定事件
+            document.getElementById('updateDataBtn').addEventListener('click', showUpdateModal);
+            document.getElementById('confirmUpdate').addEventListener('click', updateLotteryData);
+            
+            // 显示最新期号
+            if (existingData.length > 0) {
+                displayLatestData(existingData[0]);
+            }
+        });
+        
+        // 加载现有数据
+        function loadExistingData() {
+            fetch('data.js')
+                .then(response => response.text())
+                .then(content => {
+                    // 从JS文件中提取数据
+                    const match = content.match(/const lotteryData = (\[[\s\S]*?\]);/);
+                    if (match && match[1]) {
+                        try {
+                            existingData = JSON.parse(match[1]);
+                            console.log('加载了', existingData.length, '条现有数据');
+                            document.getElementById('status').innerHTML = 
+                                '<div class="alert alert-success">成功加载 ' + existingData.length + ' 条现有数据</div>';
+                        } catch (e) {
+                            console.error('解析数据失败:', e);
+                            document.getElementById('status').innerHTML = 
+                                '<div class="alert alert-danger">解析数据失败</div>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据失败:', error);
+                    document.getElementById('status').innerHTML = 
+                        '<div class="alert alert-danger">加载数据失败</div>';
+                });
+        }
+        
+        // 显示最新数据
+        function displayLatestData(data) {
+            const html = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>期号:</strong> ${data.period}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>日期:</strong> ${data.date}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>前区:</strong> ${data.frontNumbers.join(' ')}
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <strong>后区:</strong> ${data.backNumbers.join(' ')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('latestData').innerHTML = html;
+        }
+        
+        // 显示更新数据模态框
+        function showUpdateModal() {
+            const modal = new bootstrap.Modal(document.getElementById('updateModal'));
+            document.getElementById('updateStatus').textContent = '准备更新最新开奖数据...';
+            document.getElementById('updateProgressContainer').style.display = 'none';
+            document.getElementById('updateResult').innerHTML = '';
+            document.getElementById('confirmUpdate').disabled = false;
+            modal.show();
+        }
+        
+        // 更新大乐透数据
+        async function updateLotteryData() {
+            // 禁用更新按钮，防止重复点击
+            document.getElementById('confirmUpdate').disabled = true;
+            document.getElementById('updateStatus').textContent = '正在获取最新开奖数据...';
+            document.getElementById('updateProgressContainer').style.display = 'block';
+            
+            // 显示进度条
+            let progress = 0;
+            const progressBar = document.getElementById('updateProgress');
+            const progressInterval = setInterval(() => {
+                progress = Math.min(progress + 5, 90); // 最多到90%，等待实际结果
+                progressBar.style.width = `${progress}%`;
+                progressBar.textContent = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+            }, 200);
+            
+            try {
+                // 尝试获取最新数据
+                let apiResponse;
+                let response;
+                
+                // 尝试使用官方API
+                try {
+                    response = await fetch('https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry?gameNo=85&provinceId=0&pageSize=30&isVerify=1&pageNo=1');
+                    
+                    if (response.ok) {
+                        apiResponse = await response.json();
+                        console.log('API响应:', apiResponse);
+                        
+                        // 检查API返回数据结构
+                        if (apiResponse.success) {
+                            if (apiResponse.data && apiResponse.data.list) {
+                                // 旧版API格式
+                            } else if (apiResponse.value && apiResponse.value.drawResult) {
+                                // 新版API格式
+                                apiResponse.data = { list: apiResponse.value.drawResult || [] };
+                            } else if (apiResponse.value && apiResponse.value.lotteryDrawResult) {
+                                // 最新API格式
+                                apiResponse.data = { list: [apiResponse.value] };
+                            } else {
+                                throw new Error('API返回数据格式不正确');
+                            }
+                        }
+                    } else {
+                        throw new Error('官方API请求失败');
+                    }
+                } catch (error) {
+                    // 如果官方API失败，尝试使用备用API
+                    console.warn('官方API请求失败，尝试使用备用API:', error.message);
+                    
+                    try {
+                        response = await fetch('https://api.apiopen.top/api/getlottery?type=dlt&limit=30');
+                        if (response.ok) {
+                            const backupApiResponse = await response.json();
+                            if (backupApiResponse.code === 200 && backupApiResponse.data && backupApiResponse.data.length > 0) {
+                                // 转换数据格式以匹配官方API结构
+                                apiResponse = {
+                                    success: true,
+                                    data: {
+                                        list: backupApiResponse.data.map(item => {
+                                            // 解析日期 "2025-01-01" 格式
+                                            const dateParts = item.expect.split('-');
+                                            const lotteryDrawNum = dateParts[0] + dateParts[1].padStart(3, '0');
+                                            const lotteryDrawTime = dateParts.join('-');
+                                            const numbers = item.openCode.split('+');
+                                            const frontNumbers = numbers[0] ? numbers[0].split(' ') : [];
+                                            const backNumbers = numbers[1] ? numbers[1].split(' ') : [];
+                                            
+                                            return {
+                                                lotteryDrawNum,
+                                                lotteryDrawTime,
+                                                lotteryDrawResult: [...frontNumbers, ...backNumbers].join(' ')
+                                            };
+                                        })
+                                    }
+                                };
+                            } else {
+                                throw new Error('备用API返回数据格式不正确');
+                            }
+                        } else {
+                            throw new Error('备用API请求失败');
+                        }
+                    } catch (backupError) {
+                        console.warn('备用API也失败了:', backupError.message);
+                        throw new Error('无法从任何数据源获取最新数据。可能是因为浏览器安全限制或API服务不可用。请尝试使用Node.js脚本更新数据: node update_data.js');
+                    }
+                }
+                
+                // 转换数据格式
+                const newLotteryData = apiResponse.data.list.map(item => {
+                    // 检查数据结构
+                    let lotteryDrawNum, lotteryDrawResult, lotteryDrawTime;
+                    
+                    // 尝试从不同可能的结构中提取数据
+                    if (item.lotteryDrawNum !== undefined) {
+                        lotteryDrawNum = item.lotteryDrawNum;
+                        lotteryDrawResult = item.lotteryDrawResult;
+                        lotteryDrawTime = item.lotteryDrawTime;
+                    } else if (item.drawNum !== undefined) {
+                        lotteryDrawNum = item.drawNum;
+                        lotteryDrawResult = item.drawResult;
+                        lotteryDrawTime = item.drawTime;
+                    } else if (item.lottery && item.lottery.lotteryDrawNum) {
+                        lotteryDrawNum = item.lottery.lotteryDrawNum;
+                        lotteryDrawResult = item.lottery.lotteryDrawResult;
+                        lotteryDrawTime = item.lottery.lotteryDrawTime;
+                    }
+                    
+                    // 从 lotteryDrawResult 字符串中提取前区和后区号码
+                    if (!lotteryDrawResult) {
+                        console.warn('未找到开奖结果字段', item);
+                        return null;
+                    }
+                    
+                    const numbers = lotteryDrawResult.split(' ');
+                    if (numbers.length < 7) {
+                        console.warn('开奖结果格式不正确', lotteryDrawResult);
+                        return null;
+                    }
+                    
+                    const frontNumbers = numbers.slice(0, 5).map(n => parseInt(n));
+                    const backNumbers = numbers.slice(5, 7).map(n => parseInt(n));
+                    
+                    return {
+                        period: lotteryDrawNum,
+                        date: lotteryDrawTime.split(' ')[0],
+                        frontNumbers,
+                        backNumbers,
+                        rawData: `${lotteryDrawNum} ${lotteryDrawTime.split(' ')[0]} ${numbers.join(' ')}`
+                    };
+                }).filter(item => item !== null); // 过滤掉无效的项
+                
+                console.log('转换后的数据:', newLotteryData);
+                
+                // 合并数据
+                const existingPeriods = new Set(existingData.map(item => item.period));
+                const filteredNewData = newLotteryData.filter(item => !existingPeriods.has(item.period));
+                
+                // 停止进度条动画
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                progressBar.setAttribute('aria-valuenow', 100);
+                
+                // 显示更新结果
+                const updateResult = document.getElementById('updateResult');
+                
+                if (filteredNewData.length > 0) {
+                    // 显示最新数据
+                    displayLatestData(filteredNewData[0]);
+                    
+                    updateResult.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6><i class="bi bi-check-circle-fill"></i> 数据获取成功</h6>
+                            <p class="mb-0">成功获取 <strong>${filteredNewData.length}</strong> 条新开奖数据</p>
+                            <p class="mb-0">最新期号: <strong>${filteredNewData[0].period}</strong> (${filteredNewData[0].date})</p>
+                        </div>
+                    `;
+                } else {
+                    updateResult.innerHTML = `
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle-fill"></i> 没有新数据</h6>
+                            <p class="mb-0">当前数据已是最新，无需更新</p>
+                        </div>
+                    `;
+                }
+                
+                // 3秒后自动关闭模态框
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('updateModal'));
+                    if (modal) modal.hide();
+                }, 3000);
+                
+            } catch (error) {
+                // 停止进度条动画
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                progressBar.setAttribute('aria-valuenow', 100);
+                
+                // 显示错误信息
+                document.getElementById('updateResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6><i class="bi bi-exclamation-triangle-fill"></i> 获取失败</h6>
+                        <p class="mb-0">${error.message}</p>
+                        <p class="mb-0">请检查网络连接或稍后重试</p>
+                    </div>
+                `;
+                
+                // 重新启用更新按钮
+                document.getElementById('confirmUpdate').disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

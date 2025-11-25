@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大乐透号码走势区间分布折线图</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            
+            --blue-color: #3498db;
+            --black-color: #2c3e50;
+            --red-color: #e74c3c;
+            --yellow-color: #f39c12;
+            --green-color: #2ecc71;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--secondary-color);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: var(--secondary-color);
+            padding: 15px 20px;
+        }
+        
+        .filter-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        
+        .stats-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stats-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .color-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            background-color: var(--secondary-color);
+            color: white;
+            text-align: center;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        
+        .toggle-chart {
+            margin-bottom: 15px;
+        }
+        
+        .ball {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            line-height: 30px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 5px;
+            font-size: 14px;
+        }
+        
+        .ball.red {
+            background-color: #e74c3c;
+        }
+        
+        .ball.blue {
+            background-color: #3498db;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .table th {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .table td {
+            vertical-align: middle;
+            padding: 10px 8px;
+            border-top: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+        
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        /* 摇奖相关样式 */
+        .element-selector {
+            margin: 15px 0;
+        }
+        
+        .element-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .element-badge {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .result-ball {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin: 0 8px;
+            line-height: 50px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: bounceIn 0.6s ease-out;
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+            
+            .stats-value {
+                font-size: 20px;
+            }
+            
+            .ball {
+                width: 25px;
+                height: 25px;
+                line-height: 25px;
+                font-size: 12px;
+            }
+            
+            .table th, .table td {
+                padding: 8px 5px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="text-center mb-0">
+                <i class="bi bi-graph-up"></i> 大乐透区间分布折线图
+            </h1>
+            <p class="text-center mt-2 mb-0">大乐透前区35个号码按五行属性分为5个区间，分析号码属性分布趋势</p>
+            <div class="text-center mt-3">
+                <a href="index.html" class="btn btn-light me-2">
+                    <i class="bi bi-table"></i> 数据分析表
+                </a>
+                <a href="chart.html" class="btn btn-light me-2">
+                    <i class="bi bi-stars"></i> 五行摇奖器
+                </a>
+                <!-- 隐藏了五行摇奖模拟器 -->
+                <!-- <a href="lottery_simulator.html" class="btn btn-light">
+                    <i class="bi bi-stars"></i> 五行摇奖模拟器
+                </a> -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="filter-container">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="periodCount" class="form-label">显示期数</label>
+                    <select class="form-select" id="periodCount">
+                        <option value="20">最近20期</option>
+                        <option value="30">最近30期</option>
+                        <option value="50">最近50期</option>
+                        <option value="100" selected>最近100期</option>
+                        <option value="200">最近200期</option>
+                        <option value="0">全部</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="chartType" class="form-label">图表类型</label>
+                    <select class="form-select" id="chartType">
+                        <option value="line" selected>折线图</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="updateButton" class="form-label d-none">&nbsp;</label>
+                    <div class="btn-group w-100">
+                        <button id="updateData" class="btn btn-warning">
+                            <i class="bi bi-cloud-download"></i> 更新数据
+                        </button>
+                        <button id="updateButton" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> 更新图表
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- 图表容器 -->
+        <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-stars"></i> 前区号码设置
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="blueCheck" checked>
+                                        <label class="form-check-label" for="blueCheck">
+                                            <span class="element-badge" style="background-color: var(--blue-color);"></span>
+                                            <span>水 (01-07)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="blueCount" min="0" max="5" value="1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="blackCheck" checked>
+                                        <label class="form-check-label" for="blackCheck">
+                                            <span class="element-badge" style="background-color: var(--black-color);"></span>
+                                            <span>金 (08-14)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="blackCount" min="0" max="5" value="1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="redCheck" checked>
+                                        <label class="form-check-label" for="redCheck">
+                                            <span class="element-badge" style="background-color: var(--red-color);"></span>
+                                            <span>火 (15-21)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="redCount" min="0" max="5" value="1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="yellowCheck" checked>
+                                        <label class="form-check-label" for="yellowCheck">
+                                            <span class="element-badge" style="background-color: var(--yellow-color);"></span>
+                                            <span>土 (22-28)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="yellowCount" min="0" max="5" value="1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="greenCheck" checked>
+                                        <label class="form-check-label" for="greenCheck">
+                                            <span class="element-badge" style="background-color: var(--green-color);"></span>
+                                            <span>木 (29-35)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="greenCount" min="0" max="5" value="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-stars"></i> 后区号码设置
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="sunCheck" checked>
+                                        <label class="form-check-label" for="sunCheck">
+                                            <span class="element-badge" style="background-color: #FFD700;"></span>
+                                            <span>日 (奇数 01-11)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="sunCount" min="0" max="2" value="1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-sm-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check me-2">
+                                        <input class="form-check-input" type="checkbox" id="moonCheck" checked>
+                                        <label class="form-check-label" for="moonCheck">
+                                            <span class="element-badge" style="background-color: #4A90E2;"></span>
+                                            <span>月 (偶数 02-12)</span>
+                                        </label>
+                                    </div>
+                                    <input type="number" class="form-control form-control-sm w-25" id="moonCount" min="0" max="2" value="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 摇奖按钮和结果显示 -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <button id="startButton" class="btn btn-lg btn-primary me-3" onclick="handleStartClick()">
+                    <i class="bi bi-stars"></i> 开始摇奖
+                </button>
+                <button id="resetButton" class="btn btn-lg btn-secondary" onclick="handleResetClick()">
+                    <i class="bi bi-arrow-clockwise"></i> 重置
+                </button>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h5>前区号码</h5>
+                        <div id="frontResult" class="mb-4">
+                            <span class="text-muted">设置元素号码数量后点击"开始摇奖"</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>后区号码</h5>
+                        <div id="backResult" class="mb-4">
+                            <span class="text-muted">设置日月号码数量后点击"开始摇奖"</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-table"></i> 大乐透号码走势
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>期号</th>
+                                <th>开奖日期</th>
+                                <th>前区号码</th>
+                                <th>后区号码</th>
+                                <th>号码属性</th>
+                                <th>奇偶比</th>
+                                <th>质合比</th>
+                                <th>和值</th>
+                                <th>跨度</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- 数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="loading" id="tableLoading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-3">正在加载数据...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pagination-container">
+            <nav aria-label="Page navigation">
+                <ul class="pagination" id="pagination">
+                    <!-- 分页将通过JavaScript动态生成 -->
+                </ul>
+            </nav>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-3" id="loadingText">正在生成图表...</p>
+        </div>
+    </div>
+    
+    <!-- 更新数据模态框 -->
+    <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateModalLabel">
+                        <i class="bi bi-cloud-download"></i> 更新大乐透数据
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="updateStatus">准备更新最新开奖数据...</p>
+                    <div class="progress mb-3" id="updateProgressContainer" style="display: none;">
+                        <div class="progress-bar" id="updateProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <div id="updateResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-warning" id="confirmUpdate">
+                        <i class="bi bi-cloud-download"></i> 确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="container">
+            <p>&copy; 2025 大乐透号码走势分析工具. 所有数据仅供参考，请理性购彩.</p>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="data.js"></script>
+    <script src="chart.js"></script>
+    <script>
+        // 全局点击处理函数
+        function handleStartClick() {
+            console.log('全局开始摇奖函数被调用');
+            // 获取当前DOM元素
+            const startBtn = document.getElementById('startButton');
+            const frontResult = document.getElementById('frontResult');
+            const backResult = document.getElementById('backResult');
+            
+            // 确保所有必要的变量都已定义
+            if (typeof startDrawing === 'function') {
+                startDrawing();
+            } else {
+                console.error('startDrawing函数未定义');
+                alert('系统错误，请刷新页面重试');
+            }
+        }
+        
+        function handleResetClick() {
+            console.log('全局重置函数被调用');
+            // 获取当前DOM元素
+            
+            // 确保所有必要的变量都已定义
+            if (typeof resetDrawing === 'function') {
+                resetDrawing();
+            } else {
+                console.error('resetDrawing函数未定义');
+                alert('系统错误，请刷新页面重试');
+            }
+        }
+        // 号码范围配置
+        const numberRanges = {
+            blue: { min: 1, max: 7, class: 'blue', label: '水' },
+            black: { min: 8, max: 14, class: 'black', label: '金' },
+            red: { min: 15, max: 21, class: 'red', label: '火' },
+            yellow: { min: 22, max: 28, class: 'yellow', label: '土' },
+            green: { min: 29, max: 35, class: 'green', label: '木' },
+            sun: { min: 1, max: 11, step: 2, class: 'sun', label: '日' },  // 奇数
+            moon: { min: 2, max: 12, step: 2, class: 'moon', label: '月' }  // 偶数
+        };
+        
+        // 全局变量
+        let isDrawing = false;
+        let frontNumbers = [];
+        let backNumbers = [];
+        
+        // DOM元素
+        const frontResult = document.getElementById('frontResult');
+        const backResult = document.getElementById('backResult');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        
+        // 元素复选框
+        const elementChecks = {
+            blue: document.getElementById('blueCheck'),
+            black: document.getElementById('blackCheck'),
+            red: document.getElementById('redCheck'),
+            yellow: document.getElementById('yellowCheck'),
+            green: document.getElementById('greenCheck'),
+            sun: document.getElementById('sunCheck'),
+            moon: document.getElementById('moonCheck')
+        };
+        
+        // 号码数量滑块和显示
+        const elementCountSliders = {
+            blue: document.getElementById('blueCount'),
+            black: document.getElementById('blackCount'),
+            red: document.getElementById('redCount'),
+            yellow: document.getElementById('yellowCount'),
+            green: document.getElementById('greenCount'),
+            sun: document.getElementById('sunCount'),
+            moon: document.getElementById('moonCount')
+        };
+        
+        const elementCountValues = {
+            blue: document.getElementById('blueCountValue'),
+            black: document.getElementById('blackCountValue'),
+            red: document.getElementById('redCountValue'),
+            yellow: document.getElementById('yellowCountValue'),
+            green: document.getElementById('greenCountValue'),
+            sun: document.getElementById('sunCountValue'),
+            moon: document.getElementById('moonCountValue')
+        };
+        
+        // 初始化
+        function initLottery() {
+            console.log('初始化摇奖功能开始...');
+            
+            // 确保DOM元素存在
+            const startBtn = document.getElementById('startButton');
+            const resetBtn = document.getElementById('resetButton');
+            const frontRes = document.getElementById('frontResult');
+            const backRes = document.getElementById('backResult');
+            
+            console.log('检查DOM元素:', {
+                startButton: !!startBtn,
+                resetButton: !!resetBtn,
+                frontResult: !!frontRes,
+                backResult: !!backRes
+            });
+            
+            if (!startBtn || !resetBtn || !frontRes || !backRes) {
+                console.error('DOM元素未找到，延迟重试...');
+                setTimeout(initLottery, 500);
+                return;
+            }
+            
+            // 绑定复选框事件
+            for (const [element, checkbox] of Object.entries(elementChecks)) {
+                if (!checkbox) {
+                    console.error(`复选框${element}未找到`);
+                    continue;
+                }
+                checkbox.addEventListener('change', () => {
+                    // 启用/禁用对应的输入框
+                    elementCountSliders[element].disabled = !checkbox.checked;
+                });
+            }
+            
+            // 绑定输入框事件
+            for (const [element, input] of Object.entries(elementCountSliders)) {
+                if (!input) {
+                    console.error(`输入框${element}未找到`);
+                    continue;
+                }
+                input.addEventListener('input', () => {
+                    // 验证输入值范围
+                    const min = parseInt(input.min);
+                    const max = parseInt(input.max);
+                    let value = parseInt(input.value);
+                    
+                    if (isNaN(value) || value < min) {
+                        input.value = min;
+                    } else if (value > max) {
+                        input.value = max;
+                    }
+                });
+            }
+            
+            // 绑定按钮事件
+            console.log('绑定按钮事件...');
+            startButton.addEventListener('click', function(event) {
+                console.log('开始摇奖按钮被点击');
+                event.preventDefault();
+                event.stopPropagation();
+                startDrawing();
+            });
+            
+            resetButton.addEventListener('click', function(event) {
+                console.log('重置按钮被点击');
+                event.preventDefault();
+                event.stopPropagation();
+                resetDrawing();
+            });
+            console.log('按钮事件绑定完成');
+            
+            // 初始化
+            resetDrawing();
+            console.log('摇奖功能初始化完成');
+            
+            // 测试按钮是否能找到
+            const testBtn = document.getElementById('startButton');
+            if (testBtn) {
+                console.log('按钮找到，测试点击事件...');
+                console.log('按钮元素:', testBtn);
+                console.log('按钮onclick属性:', testBtn.onclick);
+                
+                // 添加一个简单的测试
+                testBtn.onclick = function() {
+                    console.log('onclick事件触发');
+                    alert('按钮点击测试');
+                };
+            } else {
+                console.error('按钮未找到');
+            }
+        }
+        
+        // 获取指定范围内的不重复数字
+        function getUniqueNumbers(range, count) {
+            const { min, max, step = 1 } = range;
+            const availableNumbers = [];
+            
+            for (let i = min; i <= max; i += step) {
+                availableNumbers.push(i);
+            }
+            
+            // 随机打乱数组
+            for (let i = availableNumbers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
+            }
+            
+            // 返回指定数量的数字
+            return availableNumbers.slice(0, count);
+        }
+        
+        // 创建球元素
+        function createBall(number, colorClass) {
+            const ball = document.createElement('div');
+            ball.className = 'result-ball';
+            ball.textContent = number < 10 ? `0${number}` : number;
+            
+            // 设置号码颜色
+            const ballColors = {
+                'blue': '#3498db',
+                'black': '#2c3e50',
+                'red': '#e74c3c',
+                'yellow': '#f39c12',
+                'green': '#2ecc71',
+                'sun': '#FFD700',
+                'moon': '#4A90E2'
+            };
+            
+            ball.style.backgroundColor = ballColors[colorClass];
+            return ball;
+        }
+        
+        // 显示结果
+        function displayResult(numbers, resultElement, isFront) {
+            console.log(`显示${isFront ? '前区' : '后区'}结果:`, numbers);
+            console.log('结果元素:', resultElement);
+            
+            // 清空结果区域
+            resultElement.innerHTML = '';
+            
+            // 确保号码是数组
+            const numberArray = Array.isArray(numbers) ? numbers : [numbers];
+            console.log('号码数组:', numberArray);
+            
+            // 排序号码（从小到大）
+            const sortedNumbers = [...numberArray].sort((a, b) => a - b);
+            console.log('排序后的号码:', sortedNumbers);
+            
+            // 为每个号码创建球
+            sortedNumbers.forEach((num, index) => {
+                setTimeout(() => {
+                    // 根据号码确定其元素属性和颜色
+                    let colorClass = '';
+                    if (isFront) {
+                        // 前区号码的五行属性
+                        if (num >= 1 && num <= 7) {
+                            colorClass = 'blue'; // 水
+                        } else if (num >= 8 && num <= 14) {
+                            colorClass = 'black'; // 金
+                        } else if (num >= 15 && num <= 21) {
+                            colorClass = 'red'; // 火
+                        } else if (num >= 22 && num <= 28) {
+                            colorClass = 'yellow'; // 土
+                        } else if (num >= 29 && num <= 35) {
+                            colorClass = 'green'; // 木
+                        }
+                    } else {
+                        // 后区号码的日月属性
+                        if (num % 2 === 1) {
+                            colorClass = 'sun'; // 奇数为日
+                        } else {
+                            colorClass = 'moon'; // 偶数为月
+                        }
+                    }
+                    
+                    // 创建号码球
+                    const ball = createBall(num, colorClass);
+                    
+                    // 添加到结果区域
+                    resultElement.appendChild(ball);
+                }, index * 200);
+            });
+        }
+        
+        // 重置摇奖
+        function resetDrawing() {
+            // 清空结果区域
+            frontResult.innerHTML = '<span class="text-muted">设置元素号码数量后点击"开始摇奖"</span>';
+            backResult.innerHTML = '<span class="text-muted">设置日月号码数量后点击"开始摇奖"</span>';
+            
+            // 重置数字数组
+            frontNumbers = [];
+            backNumbers = [];
+            
+            // 重置按钮状态
+            startButton.disabled = false;
+            startButton.innerHTML = '<i class="bi bi-stars"></i> 开始摇奖';
+            isDrawing = false;
+            
+            // 重置滑块和复选框
+            for (const element in elementChecks) {
+                // 默认选中所有元素
+                elementChecks[element].checked = true;
+                
+                // 重置前区元素滑块
+                if (element !== 'sun' && element !== 'moon') {
+                    elementCountSliders[element].value = 1;
+                    elementCountValues[element].textContent = 1;
+                    elementCountSliders[element].disabled = false;
+                } 
+                // 重置后区元素滑块
+                else {
+                    elementCountSliders[element].value = 1;
+                    elementCountValues[element].textContent = 1;
+                    elementCountSliders[element].disabled = false;
+                }
+            }
+        }
+        
+        // 开始摇奖
+        function startDrawing() {
+            // 检查是否选择了足够的元素
+            const selectedFrontElements = [];
+            for (const [element, checkbox] of Object.entries(elementChecks)) {
+                if (element !== 'sun' && element !== 'moon' && checkbox.checked) {
+                    selectedFrontElements.push(element);
+                }
+            }
+            
+            const selectedBackElements = [];
+            if (elementChecks.sun.checked) selectedBackElements.push('sun');
+            if (elementChecks.moon.checked) selectedBackElements.push('moon');
+                
+            if (selectedFrontElements.length === 0) {
+                alert('请至少选择一种前区五行元素');
+                return;
+            }
+            
+            if (selectedBackElements.length === 0) {
+                alert('请至少选择一种后区日月元素');
+                return;
+            }
+            
+            if (isDrawing) return;
+            
+            isDrawing = true;
+            startButton.disabled = true;
+            startButton.innerHTML = '<i class="bi bi-hourglass-split"></i> 摇奖中...';
+            
+            // 清空结果区域
+            frontResult.innerHTML = '';
+            backResult.innerHTML = '';
+            
+            // 延迟后生成和显示结果
+            setTimeout(() => {
+                // 生成前区号码 - 根据用户设置的总数
+                frontNumbers = [];
+                
+                // 计算用户设置的总前区号码数量
+                let totalFrontCount = 0;
+                selectedFrontElements.forEach(element => {
+                    totalFrontCount += parseInt(elementCountSliders[element].value || 1);
+                });
+                
+                // 从每个选中的前区元素获取号码
+                selectedFrontElements.forEach(element => {
+                    const range = numberRanges[element];
+                    const count = parseInt(elementCountSliders[element].value || 1);
+                    
+                    if (count > 0) {
+                        const numbers = getUniqueNumbers(range, count);
+                        frontNumbers.push(...numbers);
+                        console.log(`从${numberRanges[element].label}元素获取了${count}个号码:`, numbers);
+                    }
+                });
+                
+                // 如果用户设置的总数超过实际生成的号码数（可能是由于范围限制），从剩余号码中补充
+                if (frontNumbers.length < totalFrontCount) {
+                    // 收集所有尚未选中的前区号码
+                    const allFrontNumbers = [];
+                    for (let i = 1; i <= 35; i++) {
+                        if (!frontNumbers.includes(i)) {
+                            allFrontNumbers.push(i);
+                        }
+                    }
+                    
+                    // 随机打乱数组
+                    for (let i = allFrontNumbers.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [allFrontNumbers[i], allFrontNumbers[j]] = [allFrontNumbers[j], allFrontNumbers[i]];
+                    }
+                    
+                    // 补充到用户设置的总数
+                    const needed = totalFrontCount - frontNumbers.length;
+                    frontNumbers.push(...allFrontNumbers.slice(0, needed));
+                    console.log(`前区号码不足，补充了${needed}个随机号码`);
+                }
+                
+                // 确保前区号码按用户设置的总数排序
+                frontNumbers = frontNumbers.sort((a, b) => a - b);
+                
+                // 生成后区号码 - 根据用户设置的总数
+                backNumbers = [];
+                
+                // 计算用户设置的总后区号码数量
+                let totalBackCount = 0;
+                selectedBackElements.forEach(element => {
+                    totalBackCount += parseInt(elementCountSliders[element].value || 1);
+                });
+                
+                // 从每个选中的后区元素获取号码
+                selectedBackElements.forEach(element => {
+                    const range = numberRanges[element];
+                    const count = parseInt(elementCountSliders[element].value || 1);
+                    
+                    if (count > 0) {
+                        const numbers = getUniqueNumbers(range, count);
+                        backNumbers.push(...numbers);
+                        console.log(`从${numberRanges[element].label}元素获取了${count}个号码:`, numbers);
+                    }
+                });
+                
+                // 如果用户设置的总数超过实际生成的号码数（可能是由于范围限制），从剩余号码中补充
+                if (backNumbers.length < totalBackCount) {
+                    // 收集所有尚未选中的后区号码
+                    const allBackNumbers = [];
+                    for (let i = 1; i <= 12; i++) {
+                        if (!backNumbers.includes(i)) {
+                            allBackNumbers.push(i);
+                        }
+                    }
+                    
+                    // 随机打乱数组
+                    for (let i = allBackNumbers.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [allBackNumbers[i], allBackNumbers[j]] = [allBackNumbers[j], allBackNumbers[i]];
+                    }
+                    
+                    // 补充到用户设置的总数
+                    const needed = totalBackCount - backNumbers.length;
+                    backNumbers.push(...allBackNumbers.slice(0, needed));
+                    console.log(`后区号码不足，补充了${needed}个随机号码`);
+                }
+                
+                // 确保后区号码按用户设置的总数排序
+                backNumbers = backNumbers.sort((a, b) => a - b);
+                
+                console.log(`前区号码: ${frontNumbers.join(', ')} (共${frontNumbers.length}个)`);
+                console.log(`后区号码: ${backNumbers.join(', ')} (共${backNumbers.length}个)`);
+                console.log('frontResult元素:', frontResult);
+                console.log('backResult元素:', backResult);
+                
+                // 显示结果
+                console.log('开始显示前区结果...');
+                displayResult(frontNumbers, frontResult, true);
+                console.log('开始显示后区结果...');
+                displayResult(backNumbers, backResult, false);
+                console.log('结果显示完成');
+                
+                // 重置按钮状态
+                startButton.disabled = false;
+                startButton.innerHTML = '<i class="bi bi-arrow-clockwise"></i> 重新摇奖';
+                isDrawing = false;
+            }, 1000);
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面DOM加载完成');
+            
+            // 检查Chart库是否加载
+            console.log('Chart库:', typeof Chart !== 'undefined' ? '已加载' : '未加载');
+            
+            // 检查图表元素是否存在
+            const chartElement = document.getElementById('distributionChart');
+            console.log('图表容器元素:', chartElement ? '存在' : '不存在');
+            
+            // 检查数据是否加载
+            console.log('彩票数据:', typeof lotteryData !== 'undefined' ? `已加载 (${lotteryData.length}条)` : '未加载');
+            
+            // 先初始化图表，但要确保数据已加载
+            console.log('页面加载完成，检查数据是否加载...');
+            
+            // 等待数据加载完成后再初始化图表
+            if (typeof lotteryData === 'undefined' || lotteryData.length === 0) {
+                console.error('彩票数据未加载，等待500毫秒后重试...');
+                setTimeout(function() {
+                    if (typeof lotteryData !== 'undefined' && lotteryData.length > 0) {
+                        console.log('数据已加载，初始化图表...');
+                        if (typeof initializeChart === 'function') {
+                            initializeChart();
+                            console.log('图表初始化完成');
+                        } else {
+                            console.error('initializeChart函数未定义');
+                        }
+                    } else {
+                        console.error('数据加载超时');
+                    }
+                }, 500);
+            } else {
+                console.log(`数据已加载 (${lotteryData.length}条)，初始化图表...`);
+                console.log('检查chart.js中的关键函数:');
+                console.log('initializeChart:', typeof initializeChart !== 'undefined' ? '存在' : '不存在');
+                console.log('loadData:', typeof loadData !== 'undefined' ? '存在' : '不存在');
+                console.log('updateChart:', typeof updateChart !== 'undefined' ? '存在' : '不存在');
+                console.log('prepareChartData:', typeof prepareChartData !== 'undefined' ? '存在' : '不存在');
+                console.log('getNumberProperties:', typeof getNumberProperties !== 'undefined' ? '存在' : '不存在');
+                console.log('Chart类:', typeof Chart !== 'undefined' ? '存在' : '不存在');
+                
+                if (typeof initializeChart === 'function') {
+                    initializeChart();
+                    console.log('图表初始化完成');
+                } else {
+                    console.error('initializeChart函数未定义');
+                }
+            }
+            
+            // 再初始化摇奖功能
+            console.log('初始化摇奖功能...');
+            setTimeout(initLottery, 100); // 延迟一点初始化摇奖功能，确保图表已经初始化
+            console.log('摇奖功能初始化完成');
+        });
+    </script>
+</body>
+</html>
